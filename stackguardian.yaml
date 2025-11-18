@@ -1,0 +1,188 @@
+templateType: "IAC"
+subType: "TERRAFORM"
+name: "azure-postgresql-flexible"
+displayName: "Azure PostgreSQL Flexible Server"
+description: "Deploy PostgreSQL Flexible Server with security best practices, monitoring, and Key Vault integration"
+version: "1.0.0"
+
+author:
+  name: "Platform Team"
+  email: "platform@company.com"
+
+tags:
+  - "azure"
+  - "postgresql"
+  - "database"
+  - "flexible-server"
+  - "production-ready"
+
+category: "Database"
+
+inputs:
+  - name: "project_name"
+    displayName: "Project Name"
+    type: "string"
+    description: "Unique identifier for your project (3-20 chars, lowercase, numbers, hyphens)"
+    required: true
+    validation:
+      pattern: "^[a-z0-9-]{3,20}$"
+      message: "Must be 3-20 characters, lowercase letters, numbers, and hyphens only"
+
+  - name: "environment"
+    displayName: "Environment"
+    type: "string"
+    description: "Target environment for deployment"
+    required: true
+    allowedValues:
+      - value: "dev"
+        label: "Development"
+      - value: "test"
+        label: "Testing/Staging"
+      - value: "prod"
+        label: "Production"
+    default: "dev"
+
+  - name: "location"
+    displayName: "Azure Region"
+    type: "string"
+    description: "Azure region for resource deployment"
+    required: false
+    default: "West Europe"
+    allowedValues:
+      - value: "West Europe"
+        label: "West Europe"
+      - value: "North Europe"
+        label: "North Europe"
+      - value: "East US"
+        label: "East US"
+      - value: "West US 2"
+        label: "West US 2"
+
+  - name: "database_names"
+    displayName: "Database Names"
+    type: "array"
+    description: "List of databases to create (1-5 databases)"
+    required: false
+    default: ["app_db"]
+    validation:
+      minItems: 1
+      maxItems: 5
+
+  - name: "sku_name"
+    displayName: "Server Size"
+    type: "string"
+    description: "PostgreSQL server size and performance tier"
+    required: false
+    default: "B_Standard_B1ms"
+    allowedValues:
+      - value: "B_Standard_B1ms"
+        label: "Basic - 1 vCore, 2GB RAM (Dev/Test)"
+      - value: "B_Standard_B2s"
+        label: "Basic - 2 vCore, 4GB RAM (Small Workloads)"
+      - value: "GP_Standard_D2s_v3"
+        label: "General Purpose - 2 vCore, 8GB RAM (Production)"
+      - value: "GP_Standard_D4s_v3"
+        label: "General Purpose - 4 vCore, 16GB RAM (High Performance)"
+
+  - name: "backup_retention_days"
+    displayName: "Backup Retention Days"
+    type: "number"
+    description: "Number of days to retain automated backups"
+    required: false
+    default: 7
+    validation:
+      minimum: 7
+      maximum: 35
+
+  - name: "admin_username"
+    displayName: "Admin Username"
+    type: "string"
+    description: "PostgreSQL administrator username"
+    required: false
+    default: "pgadmin"
+    validation:
+      pattern: "^[a-z][a-z0-9_]{2,15}$"
+      message: "3-16 characters, start with letter, lowercase letters/numbers/underscores only"
+
+  - name: "tags"
+    displayName: "Additional Tags"
+    type: "object"
+    description: "Additional tags to apply to resources (optional)"
+    required: false
+    default: {}
+
+outputs:
+  - name: "resource_group_name"
+    displayName: "Resource Group Name"
+    description: "Name of the created resource group"
+
+  - name: "postgresql_server_name"
+    displayName: "PostgreSQL Server Name"
+    description: "Name of the PostgreSQL server"
+
+  - name: "postgresql_fqdn"
+    displayName: "PostgreSQL FQDN"
+    description: "Fully qualified domain name for database connections"
+
+  - name: "database_names"
+    displayName: "Database Names"
+    description: "List of created databases"
+
+  - name: "admin_username"
+    displayName: "Admin Username"
+    description: "PostgreSQL administrator username"
+
+  - name: "connection_string_key_vault"
+    displayName: "Key Vault Name"
+    description: "Key Vault containing connection string"
+
+  - name: "connection_string_secret_name"
+    displayName: "Connection String Secret"
+    description: "Name of the secret containing the database connection string"
+
+  - name: "server_version"
+    displayName: "PostgreSQL Version"
+    description: "PostgreSQL server version"
+
+  - name: "location"
+    displayName: "Deployment Location"
+    description: "Azure region where resources were deployed"
+
+  - name: "tags"
+    displayName: "Applied Tags"
+    description: "Tags applied to the resources"
+
+documentation:
+  overview: |
+    This template creates a production-ready PostgreSQL Flexible Server in Azure with:
+    - Secure configuration with SSL enforcement
+    - Automated backups with configurable retention
+    - Key Vault integration for connection string storage
+    - Comprehensive monitoring and logging
+    - Environment-specific configurations
+
+  prerequisites: |
+    - Azure subscription with Contributor access
+    - Proper network configuration if using private endpoints
+    - Azure Key Vault permissions for the deployment service principal
+
+  postDeployment: |
+    After deployment:
+    1. Retrieve the connection string from the specified Key Vault
+    2. Configure your applications to use the PostgreSQL server
+    3. Set up monitoring and alerting as needed
+    4. Consider implementing private endpoints for production workloads
+
+validation:
+  required:
+    - azurerm_provider: "~> 3.80"
+    - terraform_version: ">= 1.5"
+
+  policies:
+    - name: "backup_retention_minimum"
+      description: "Ensure minimum backup retention of 7 days"
+      rule: "var.backup_retention_days >= 7"
+
+    - name: "production_geo_redundancy"
+      description: "Production environments must have geo-redundant backups"
+      rule: "var.environment != 'prod' || azurerm_postgresql_flexible_server.main.geo_redundant_backup_enabled == true"
